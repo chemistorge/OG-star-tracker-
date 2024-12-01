@@ -11,7 +11,7 @@
 #include "index_html.h"
 #include "intervalometer.h"
 // try to update every time there is breaking change
-const int firmware_version = 6;
+const int firmware_version = 7;
 
 // Set your Wi-Fi credentials
 const byte DNS_PORT = 53;

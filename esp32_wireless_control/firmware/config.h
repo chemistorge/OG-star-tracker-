@@ -1,6 +1,7 @@
 #ifndef CONFIG
 #define CONFIG
 
+/*To build in Arduino IDE, install esp32 boards V3.0x and the Arduinojson library by Benoit Blanchon*/
 /*****USER DEFINED*****/
 //AP mode by default: ESP32 will create a wifi network which you can connect to
 #define AP              //comment this line if you want ESP32 to connect to your existing wifi network/hotspot
