@@ -15,10 +15,8 @@ const int firmware_version = 6;
 
 // Set your Wi-Fi credentials
 const byte DNS_PORT = 53;
-//const char* ssid = "OG Star Tracker";  //change to your SSID
-//const char* password = "password123";  //change to your password, must be 8+ characters
-const char* ssid = "NowhereNet";                 //change to your SSID
-const char* password = "Ilove69dogsand34*cats";  //change to your password, must be 8+ characters
+const char* ssid = "OG Star Tracker";  //change to your SSID
+const char* password = "password123";  //change to your password, must be 8+ characters
 //If you are using AP mode, you can access the website using the below URL
 const String website_name = "www.tracker.com";
 #define MIN_CUSTOM_SLEW_RATE 2
@@ -60,36 +58,14 @@ void handleOff() {
   server.send(200, MIME_TYPE_TEXT, TRACKING_OFF);
 }
 
-void handleSlewRequest() {    //add togther with
+void handleSlewRequest() {
   if (!ra_axis.slewActive) {  //if slew is not active - needed for ipad (passes multiple touchon events)
     int slew_speed = server.arg(SPEED).toInt();
-    int slew_direction = server.arg(SLEW_DIRECTION).toInt();
+    int direction = server.arg(DIRECTION).toInt();
     //limit custom slew speed to 2-400
     slew_speed = slew_speed > MAX_CUSTOM_SLEW_RATE ? MAX_CUSTOM_SLEW_RATE : slew_speed < MIN_CUSTOM_SLEW_RATE ? MIN_CUSTOM_SLEW_RATE
                                                                                                               : slew_speed;
-    ra_axis.startSlew((2 * ra_axis.trackingRate) / slew_speed, slew_direction);
-    server.send(200, MIME_TYPE_TEXT, SLEWING);
-  }
-}
-
-void handleLeft() {           //add togther with
-  if (!ra_axis.slewActive) {  //if slew is not active - needed for ipad (passes multiple touchon events)
-    int slew_speed = server.arg(SPEED).toInt();
-    //limit custom slew speed to 2-400
-    slew_speed = slew_speed > MAX_CUSTOM_SLEW_RATE ? MAX_CUSTOM_SLEW_RATE : slew_speed < MIN_CUSTOM_SLEW_RATE ? MIN_CUSTOM_SLEW_RATE
-                                                                                                              : slew_speed;
-    ra_axis.startSlew((2 * ra_axis.trackingRate) / slew_speed, 0);
-    server.send(200, MIME_TYPE_TEXT, SLEWING);
-  }
-}
-
-void handleRight() {
-  if (!ra_axis.slewActive) {  //if slew is not active - needed for ipad (passes multiple touchon events)
-    int slew_speed = server.arg(SPEED).toInt();
-    //limit custom slew speed to 2-400
-    slew_speed = slew_speed > MAX_CUSTOM_SLEW_RATE ? MAX_CUSTOM_SLEW_RATE : slew_speed < MIN_CUSTOM_SLEW_RATE ? MIN_CUSTOM_SLEW_RATE
-                                                                                                              : slew_speed;
-    ra_axis.startSlew((2 * ra_axis.trackingRate) / slew_speed, 1);
+    ra_axis.startSlew((2 * ra_axis.trackingRate) / slew_speed, direction);
     server.send(200, MIME_TYPE_TEXT, SLEWING);
   }
 }
@@ -98,6 +74,7 @@ void handleSlewOff() {
   if (ra_axis.slewActive) {  //if slew is active needed for ipad (passes multiple touchoff events)
     ra_axis.stopSlew();
   }
+  server.send(200, MIME_TYPE_TEXT, "SLEW CANCELLED");
 }
 
 void handleSetCurrent() {
@@ -118,6 +95,7 @@ void handleSetCurrent() {
         captureMode = Intervalometer::DAY_TIME_LAPSE_PAN;
         break;
       default:
+        captureMode = Intervalometer::LONG_EXPOSURE_STILL;
         break;
     }
     intervalometer.currentSettings.mode = captureMode;
@@ -130,19 +108,21 @@ void handleSetCurrent() {
     intervalometer.currentSettings.panDirection = server.arg(PAN_DIRECTION).toInt();
     intervalometer.currentSettings.enableTracking = server.arg(ENABLE_TRACKING).toInt();
     intervalometer.currentSettings.dither = server.arg(DITHER_CHOICE).toInt();
-    intervalometer.currentSettings.ditherFrequency = server.arg(DITHER_FREQ).toInt();
+    intervalometer.currentSettings.ditherFrequency = server.arg(DITHER_FREQUENCY).toInt();
     intervalometer.currentSettings.focalLength = server.arg(FOCAL_LENGTH).toInt();
     intervalometer.currentSettings.pixelSize = server.arg(PIXEL_SIZE).toFloat() / 100;
     String currentMode = server.arg(MODE);
     if (currentMode == "save") {
       int preset = server.arg(PRESET).toInt();
-      // Serial.print("presetSet=");
-      // Serial.println(preset);
       intervalometer.saveSettingsToPreset(preset);
       server.send(200, MIME_TYPE_TEXT, "Saved Preset");
     } else if (currentMode == "start") {
-      intervalometer.startCapture();
-      server.send(200, MIME_TYPE_TEXT, CAPTURE_ON);
+      if ((intervalometer.currentSettings.mode == Intervalometer::LONG_EXPOSURE_MOVIE || intervalometer.currentSettings.mode == Intervalometer::LONG_EXPOSURE_STILL) && !ra_axis.trackingActive) {
+        server.send(200, MIME_TYPE_TEXT, "TRACKING NOT ACTIVE!! Please start");
+      } else {
+        intervalometer.startCapture();
+        server.send(200, MIME_TYPE_TEXT, CAPTURE_ON);
+      }
     }
   } else {
     server.send(200, MIME_TYPE_TEXT, CAPTURE_ALREADY_ON);
@@ -152,8 +132,6 @@ void handleSetCurrent() {
 
 void handleGetPresetExposureSettings() {
   int preset = server.arg(PRESET).toInt();
-  // Serial.print("presetGet=");
-  // Serial.println(preset);
   intervalometer.readSettingsFromPreset(preset);
   JsonDocument settings;
   String json;
@@ -165,14 +143,14 @@ void handleGetPresetExposureSettings() {
   settings[PAN_ANGLE] = intervalometer.currentSettings.panAngle * 100;
   settings[PAN_DIRECTION] = intervalometer.currentSettings.panDirection;
   settings[DITHER_CHOICE] = intervalometer.currentSettings.dither;
-  settings[DITHER_FREQ] = intervalometer.currentSettings.ditherFrequency;
+  settings[DITHER_FREQUENCY] = intervalometer.currentSettings.ditherFrequency;
   settings[ENABLE_TRACKING] = intervalometer.currentSettings.enableTracking;
   settings[FRAMES] = intervalometer.currentSettings.frames;
   settings[PIXEL_SIZE] = intervalometer.currentSettings.pixelSize * 100;
   settings[FOCAL_LENGTH] = intervalometer.currentSettings.focalLength;
   serializeJson(settings, json);
-  Serial.println(json);
-  server.send(200, "application/json", json);
+  // Serial.println(json);
+  // server.send(200, "application/json", json);
 }
 
 void handleAbortCapture() {
@@ -184,30 +162,43 @@ void handleAbortCapture() {
   }
 }
 
-void handleStatusRequest() {  //tosort
-  if (ra_axis.slewActive) {
-    slewTimeOut.setCountValue(0);  //reset timeout counter
+void handleStatusRequest() {
+  if (intervalometer.intervalometerActive) {
+    switch (intervalometer.currentState) {
+      case Intervalometer::PRE_DELAY:
+        server.send(200, MIME_TYPE_TEXT, "Capture: Predelay");
+        break;
+      case Intervalometer::CAPTURE:
+        server.send(200, MIME_TYPE_TEXT, "Capture: Exposing");
+        break;
+      case Intervalometer::DITHER:
+        server.send(200, MIME_TYPE_TEXT, "Capture: Dither");
+        break;
+      case Intervalometer::PAN:
+        server.send(200, MIME_TYPE_TEXT, "Capture: Panning");
+        break;
+      case Intervalometer::DELAY:
+        server.send(200, MIME_TYPE_TEXT, "Capture: Delay");
+        break;
+      case Intervalometer::REWIND:
+        server.send(200, MIME_TYPE_TEXT, "Capture: Rewind");
+        break;
+      case Intervalometer::INACTIVE:
+      default:
+        break;
+    }
+  } else if (ra_axis.slewActive) {
     server.send(200, MIME_TYPE_TEXT, SLEWING);
-    // } else if (photo_control_status != INACTIVE) {
-    //   char status[60];
-    //   sprintf(status, CAPTURES_REMAINING, exposure_count - exposures_taken);
-    //   server.send(200, MIME_TYPE_TEXT, status);
-    //   return;
-    // } else if (!ra_axis.trackingActive && photo_control_status == INACTIVE) {
-    //   server.send(200, MIME_TYPE_TEXT, IDLE);
-    //   return;
   } else if (ra_axis.trackingActive) {
     server.send(200, MIME_TYPE_TEXT, TRACKING_ON);
-    return;
   }
 
+  if (ra_axis.slewActive) {
+    slewTimeOut.setCountValue(0);  //reset timeout counter
+  }
+
+
   server.send(204, MIME_TYPE_TEXT, "dummy");
-
-  // TODO add detection for capturing
-}
-
-void sendError(String errorMessage) {
-  server.send(204, MIME_TYPE_TEXT, errorMessage);
 }
 
 void handleVersion() {
@@ -256,8 +247,6 @@ void setup() {
   server.on("/on", HTTP_GET, handleOn);
   server.on("/off", HTTP_GET, handleOff);
   server.on("/startslew", HTTP_GET, handleSlewRequest);
-  server.on("/left", HTTP_GET, handleLeft);
-  server.on("/right", HTTP_GET, handleRight);
   server.on("/stopslew", HTTP_GET, handleSlewOff);
   server.on("/setCurrent", HTTP_GET, handleSetCurrent);
   server.on("/readPreset", HTTP_GET, handleGetPresetExposureSettings);

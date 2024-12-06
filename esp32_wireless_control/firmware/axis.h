@@ -22,7 +22,7 @@ class Axis {
 
 public:
 
-  Axis(uint8_t axisNumber, bool defaultTrackingOn, uint8_t dirPinforAxis, bool invertDirPin);
+  Axis(uint8_t axisNumber, uint8_t dirPinforAxis, bool invertDirPin);
   void startTracking(trackingRateS rate, bool directionArg);
   void stopTracking();
   void startSlew(uint64_t rate, bool directionArg);

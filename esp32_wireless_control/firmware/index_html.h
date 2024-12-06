@@ -1,3 +1,6 @@
+#ifndef INDEX_HTML_H 
+#define INDEX_HTML_H
+
 const char html_content[] = R"=====(
   <DOCTYPE html> 
   <html lang="en"> 
@@ -210,17 +213,22 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
       sendRequest('/stopslew'); 
     } 
 
-    function sendSlewRequest(url) { 
+    function sendSlewRequest(directionArg) { 
       if (lastClick >= (Date.now() - delay)) 
         return; 
-      lastClick = Date.now(); 
+      lastClick = Date.now();
+      if (directionArg == 'left') {
+        direction = 0;
+      } else if (directionArg == 'right') {
+         direction = 1;
+      }
       var index = document.getElementById('slew-select').selectedIndex; 
       if (index == 6) { 
         var speed = document.getElementById('custom-speed').value; 
       } else { 
         var speed = document.getElementById('slew-select').value; 
       } 
-      var slewurl = url + '?speed=' + speed; 
+      var slewurl = '/startslew?speed=' + speed + '&direction=' + direction; 
       sendRequest(slewurl); 
     } 
 
@@ -301,10 +309,10 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
       delay = document.getElementById('delay').valueAsNumber;
       frames = document.getElementById('mode').selectedIndex == 1 ? document.getElementById('frames').valueAsNumber : 1;
       panAngle = document.getElementById('mode').selectedIndex == 3 ? document.getElementById('panAngle').valueAsNumber : 1;
-      ditherFreq = document.getElementById('mode').selectedIndex < 2 && document.getElementById('dither').selectedIndex == 1 ? document.getElementById('ditherFrequency').valueAsNumber : 1;
+      ditherFrequency = document.getElementById('mode').selectedIndex < 2 && document.getElementById('dither').selectedIndex == 1 ? document.getElementById('ditherFrequency').valueAsNumber : 1;
       focalLength = document.getElementById('mode').selectedIndex < 2 && document.getElementById('dither').selectedIndex == 1 ? document.getElementById('focalLength').valueAsNumber : 1;
       pixelSize = document.getElementById('mode').selectedIndex < 2 && document.getElementById('dither').selectedIndex == 1 ? document.getElementById('pixelSize').valueAsNumber : 1;
-      total = exposureTime+exposures+predelay+delay+frames+panAngle+ditherFreq+focalLength+pixelSize;
+      total = exposureTime+exposures+predelay+delay+frames+panAngle+ditherFrequency+focalLength+pixelSize;
  			captureTime  = (((delay + exposureTime)*exposures-delay)*frames) + predelay;
       if (isNaN(captureTime)) {
         document.getElementById('captureTime').innerHTML = 'Capture Time: 0 h, 0 m, 0 s';
@@ -342,13 +350,13 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
           var enableTracking = document.getElementById('enableTracking').selectedIndex;
           var ditherChoice = document.getElementById('dither').selectedIndex;
           if (ditherChoice == 1){
-            var ditherFreq = document.getElementById('ditherFrequency').value.trim();
+            var ditherFrequency = document.getElementById('ditherFrequency').value.trim();
             var focalLength = document.getElementById('focalLength').value.trim(); 
-            var pixSize = Math.floor(parseFloat(document.getElementById('pixelSize').value.trim()) * 100); 
+            var pixelSize = Math.floor(parseFloat(document.getElementById('pixelSize').value.trim()) * 100); 
           } else {
-            var ditherFreq = "1";
+            var ditherFrequency = "1";
             var focalLength = "1";
-            var pixSize = "1";
+            var pixelSize = "1";
           }
           break;
         case 1:
@@ -359,13 +367,13 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
           var enableTracking = document.getElementById('enableTracking').selectedIndex;
           var ditherChoice = document.getElementById('dither').selectedIndex;
           if (ditherChoice == 1){
-            var ditherFreq = document.getElementById('ditherFrequency').value.trim();
+            var ditherFrequency = document.getElementById('ditherFrequency').value.trim();
             var focalLength = document.getElementById('focalLength').value.trim(); 
-            var pixSize = Math.floor(parseFloat(document.getElementById('pixelSize').value.trim()) * 100); 
+            var pixelSize = Math.floor(parseFloat(document.getElementById('pixelSize').value.trim()) * 100); 
           } else {
-            var ditherFreq = "1";
+            var ditherFrequency = "1";
             var focalLength = "1";
-            var pixSize = "1";
+            var pixelSize = "1";
           }
           break;
         case 2:
@@ -375,9 +383,9 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
           var panDirection = "1";
           var enableTracking = 0;
           var ditherChoice = 0;
-          var ditherFreq = "1";
+          var ditherFrequency = "1";
           var focalLength = "1";
-          var pixSize = "1";
+          var pixelSize = "1";
 				  break;
         case 3:
           var exposureTime = "1"; 
@@ -386,9 +394,9 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
           var panDirection = document.getElementById('panDirection').selectedIndex;
           var enableTracking = 0;
           var ditherChoice = 0;
-          var ditherFreq = 1;
+          var ditherFrequency = 1;
           var focalLength = 1;
-          var pixSize = 1;
+          var pixelSize = 1;
           break;
           default:
       }
@@ -396,7 +404,7 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
       var preDelay = document.getElementById('preDelay').value.trim();
       var delay = document.getElementById('delay').value.trim();
 
-      var intervalometerUrl = '/setCurrent?mode=' + mode +'&preset=' + preset + '&captureMode=' + captureMode + '&exposureTime=' + exposureTime + '&exposures=' + exposures +'&preDelay=' + preDelay + '&delay=' + delay + '&frames=' + frames + '&panAngle=' + panAngle + '&panDirection=' + panDirection + '&enableTracking=' + enableTracking + '&ditherChoice=' + ditherChoice + '&ditherFreq=' + ditherFreq + '&focalLength=' + focalLength + '&pixSize=' + pixSize;
+      var intervalometerUrl = '/setCurrent?mode=' + mode +'&preset=' + preset + '&captureMode=' + captureMode + '&exposureTime=' + exposureTime + '&exposures=' + exposures +'&preDelay=' + preDelay + '&delay=' + delay + '&frames=' + frames + '&panAngle=' + panAngle + '&panDirection=' + panDirection + '&enableTracking=' + enableTracking + '&ditherChoice=' + ditherChoice + '&ditherFrequency=' + ditherFrequency + '&focalLength=' + focalLength + '&pixelSize=' + pixelSize;
       sendRequest(intervalometerUrl); 
     }
 
@@ -411,14 +419,15 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
            document.getElementById('delay').value = settings.delay;
            document.getElementById('preDelay').value = settings.preDelay;
            document.getElementById('exposureTime').value = settings.exposureTime;
-           document.getElementById('panAngle').value = settings.panAngle;
-           document.getElementById('panDirection').value = settings.panDirection;
-           document.getElementById('dither').selectedIndex = settings.dither;
+           document.getElementById('panAngle').value = settings.panAngle/100;
+           document.getElementById('panDirection').selectedIndex = settings.panDirection;
+           document.getElementById('dither').selectedIndex = settings.ditherChoice;
            document.getElementById('ditherFrequency').value = settings.ditherFrequency;
            document.getElementById('enableTracking').selectedIndex = settings.enableTracking;
            document.getElementById('frames').value = settings.frames;
-           document.getElementById('pixelSize').value = settings.pixelSize;
+           document.getElementById('pixelSize').value = settings.pixelSize/100;
            document.getElementById('focalLength').value = settings.focalLength;
+           document.getElementById('panDirection').dispatchEvent(new Event('change'));
            document.getElementById('mode').dispatchEvent(new Event('change'));
            document.getElementById('dither').dispatchEvent(new Event('change'));
            document.getElementById('enableTracking').dispatchEvent(new Event('change'));
@@ -483,8 +492,8 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
         </div> 
         <h4>Hold direction button to slew</h4> 
         <div class="button-group"> 
-          <button class="right-separator" type="button" ontouchstart="sendSlewRequest('/left')" onmousedown="sendSlewRequest('/left')" ontouchend="sendSlewStop()" onmouseup="sendSlewStop()" onmouseleave="sendSlewStop()" ontouchcancel="sendSlewStop()">SLEW LEFT</button> 
-          <button class="left-separator" type="button" ontouchstart="sendSlewRequest('/right')" onmousedown="sendSlewRequest('/right')" ontouchend="sendSlewStop()" onmouseup="sendSlewStop()" onmouseleave="sendSlewStop()" ontouchcancel="sendSlewStop()">SLEW RIGHT</button> 
+          <button class="right-separator" type="button" ontouchstart="sendSlewRequest('left')" onmousedown="sendSlewRequest('left')" ontouchend="sendSlewStop()" onmouseup="sendSlewStop()" onmouseleave="sendSlewStop()" ontouchcancel="sendSlewStop()">SLEW LEFT</button> 
+          <button class="left-separator" type="button" ontouchstart="sendSlewRequest('right')" onmousedown="sendSlewRequest('right')" ontouchend="sendSlewStop()" onmouseup="sendSlewStop()" onmouseleave="sendSlewStop()" ontouchcancel="sendSlewStop()">SLEW RIGHT</button> 
         </div> 
         <button type="button" onclick="sendSlewStop()" >ABORT SLEW</button> 
       </div> 
@@ -497,7 +506,12 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
             <option value='1'>Preset 2</option> 
             <option value='2'>Preset 3</option> 
             <option value='3'>Preset 4</option> 
-		        <option value='4'>Preset 5</option> 
+		        <option value='4'>Preset 5</option>
+            <option value='5'>Preset 6</option>
+            <option value='6'>Preset 7</option>
+            <option value='7'>Preset 8</option>
+            <option value='8'>Preset 9</option>
+            <option value='9'>Preset 10</option>
           </select> 
         </div> 
 		    <div class="button-group"> 
@@ -588,3 +602,5 @@ ecb+yBpnGI+u4f3mmXHvX6sln9yPK6oXFwnrF9QP2D1E155JRPj/2PBNp9fMzv6D9chy0RLEZbNGlKPL
   </body> 
   </html>
 )=====";
+
+#endif

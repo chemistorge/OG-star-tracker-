@@ -9,15 +9,15 @@ HardwareTimer::HardwareTimer(uint64_t frequency, void (*functionToCall)()) {
   timer_pointer = timerBegin(frequency);
   timerAttachInterrupt(timer_pointer, ISR_Function);
 }
-void HardwareTimer::attachInterupt(void (*functionToCall)()){
+void HardwareTimer::attachInterupt(void (*functionToCall)()) {
   this->ISR_Function = functionToCall;
   timerAttachInterrupt(timer_pointer, ISR_Function);
 }
 
 void HardwareTimer::start(uint64_t alarmValue, bool autoReload) {
   timerAlarm(timer_pointer, alarmValue, true, 0);
-  timerRestart(timer_pointer);
   timerStart(timer_pointer);
+  timerRestart(timer_pointer);
 }
 
 void HardwareTimer::stop() {
@@ -27,3 +27,4 @@ void HardwareTimer::stop() {
 void HardwareTimer::setCountValue(uint64_t countValue) {
   timerWrite(timer_pointer, countValue);
 }
+

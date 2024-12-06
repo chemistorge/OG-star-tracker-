@@ -12,7 +12,7 @@
 #define ARCSEC_PER_STEP 4.0
 #endif
 
-extern void sendError(String errorMessage);
+
 
 
 class Intervalometer {
@@ -40,19 +40,13 @@ private:
   uint8_t biasedRandomDirection(uint8_t previous_direction);
   uint8_t previousDitherDirection;
 
-  enum State { INACTIVE,
-               PRE_DELAY,
-               CAPTURE,
-               DITHER,
-               PAN,
-               DELAY,
-               REWIND };
+
 
   struct Settings {  //20 bytes
     Mode mode;
     uint16_t exposures;       //2b
     uint16_t delayTime;       //seconds, max limt 18 h, 12 mins //2b
-    uint16_t preDelay;    //seconds //2b
+    uint16_t preDelay;        //seconds //2b
     uint16_t exposureTime;    //seconds, max limt 18 h, 12 mins //2b
     float panAngle;           //degrees //4b
     bool panDirection;        //
@@ -70,9 +64,16 @@ private:
 
 
 public:
+  enum State { INACTIVE,
+                      PRE_DELAY,
+                      CAPTURE,
+                      DITHER,
+                      PAN,
+                      DELAY,
+                      REWIND };
   State currentState;
   Settings currentSettings;
-  Settings presets[5];
+  Settings presets[10];
   void readPresetsFromEEPROM();
   void abortCapture();
   void startCapture();

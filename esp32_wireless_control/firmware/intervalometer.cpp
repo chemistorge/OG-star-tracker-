@@ -12,7 +12,7 @@ void intervalometer_ISA() {
 
 Intervalometer::Intervalometer(uint8_t triggerPinArg)
   : intervalometerTimer(2000, intervalometer_ISA) {  //2kHz resolution of 0.5 ms
-  
+
   currentState = INACTIVE;
   intervalometerTimer.stop();
   nextState = false;
@@ -57,6 +57,7 @@ DAY_TIME_LAPSE_PAN: Predelay>(Camera Capture>pan deg>delay (x exposures)) (no tr
 void Intervalometer::run() {
   switch (currentState) {
     case INACTIVE:
+      // Serial.println(INACTIVE);
       ra_axis.stopSlew();
       intervalometerTimer.stop();
       digitalWrite(triggerPin, LOW);
@@ -72,13 +73,11 @@ void Intervalometer::run() {
       }
       break;
     case PRE_DELAY:
+
       if (!timerStarted) {
+        // Serial.println("PREDELAY_START");
         if ((currentSettings.mode == DAY_TIME_LAPSE || currentSettings.mode == DAY_TIME_LAPSE_PAN) && ra_axis.trackingActive) {
           ra_axis.stopTracking();
-        } else if ((currentSettings.mode == LONG_EXPOSURE_MOVIE || currentSettings.mode == LONG_EXPOSURE_STILL) && !ra_axis.trackingActive) {
-          sendError("TRACKING NOT ACTIVE!! Please start");
-          currentState = INACTIVE;
-          break;
         }
         ra_axis.counterActive = currentSettings.mode == LONG_EXPOSURE_MOVIE ? true : false;
         intervalometerTimer.start(2000 * currentSettings.preDelay, false);
@@ -87,6 +86,7 @@ void Intervalometer::run() {
       }
       if (nextState) {
         intervalometerTimer.stop();
+        // Serial.println("PREDELAY_STOP");
         nextState = false;
         timerStarted = false;
         currentState = CAPTURE;
@@ -94,6 +94,7 @@ void Intervalometer::run() {
       break;
     case CAPTURE:
       if (!timerStarted) {  //nightime modes
+        // Serial.println("capture_start");
         if (currentSettings.mode == LONG_EXPOSURE_MOVIE && !ra_axis.counterActive) {
           ra_axis.resetAxisCount();
           ra_axis.counterActive = true;
@@ -111,6 +112,7 @@ void Intervalometer::run() {
       if (nextState) {
         digitalWrite(triggerPin, LOW);
         intervalometerTimer.stop();
+        // Serial.println("capture_end");
         nextState = false;
         timerStarted = false;
         exposures_taken++;
@@ -121,24 +123,21 @@ void Intervalometer::run() {
     case DITHER:
       if (exposures_taken % currentSettings.ditherFrequency == 0) {
         if (!axisMoving) {
+          // Serial.println("dither_start");
           axisMoving = true;
           uint8_t randomDirection = biasedRandomDirection(previousDitherDirection);
           previousDitherDirection = randomDirection;
-          int16_t stepsToDither = randomDirection ? ((random(200) + 1) / 100.0) * getStepsPerTenPixels() : (((random(200) + 1) / 100.0) * getStepsPerTenPixels()) * -1;
-          //Serial.print("Steps to Dither  ");
-          total += stepsToDither;
-          Serial.print("Total=  ");
-          Serial.println(total);
-          //Serial.print(", direction  ");
-          //Serial.println(randomDirection);
-
+          int16_t stepsToDither = ((random(100 * DITHER_DISTANCE_X10_PIXELS) + 1) / 100.0) * getStepsPerTenPixels();
+          stepsToDither = randomDirection ? stepsToDither : stepsToDither * -1;
           ra_axis.setAxisTargetCount(stepsToDither + ra_axis.axisCountValue);
           if (ra_axis.targetCount != ra_axis.axisCountValue) {
-            ra_axis.goToTarget = ra_axis.counterActive = true;
+            ra_axis.goToTarget = true;
+            ra_axis.counterActive = true;
             ra_axis.startSlew(ra_axis.trackingRate / 3, randomDirection);  //dither at 6 x tracking rate.
           }
         }
         if (!ra_axis.slewActive) {
+          // Serial.println("dither_end");
           if (currentSettings.mode != LONG_EXPOSURE_MOVIE) {
             ra_axis.counterActive = false;
           }
@@ -150,18 +149,24 @@ void Intervalometer::run() {
       }
       break;
     case PAN:
-      if (!ra_axis.goToTarget) {
+      if (!axisMoving) {
+        // Serial.println("pan_start");
+        axisMoving = true;
         uint64_t arcSecsToMove = uint64_t(3600.0 * currentSettings.panAngle);
         int64_t stepsToMove = currentSettings.panDirection ? arcSecsToMove / ARCSEC_PER_STEP : (arcSecsToMove / ARCSEC_PER_STEP) * -1;
         ra_axis.resetAxisCount();
         ra_axis.setAxisTargetCount(stepsToMove);
         if (ra_axis.targetCount != ra_axis.axisCountValue) {
-          ra_axis.counterActive = ra_axis.goToTarget = true;
-          ra_axis.startSlew(ra_axis.trackingRate / 5, currentSettings.panDirection);  //pan at 10x tracking rate
+          ra_axis.counterActive = true;
+          ra_axis.goToTarget = true;
+          ra_axis.startSlew(ra_axis.trackingRate / 10, currentSettings.panDirection);  //pan at 20x tracking rate
         }
       }
       if (!ra_axis.slewActive) {
-        ra_axis.counterActive = ra_axis.goToTarget = false;
+        // Serial.println("pan_end");
+        axisMoving = false;
+        ra_axis.counterActive = false;
+        ra_axis.goToTarget = false;
         currentState = DELAY;
       }
       break;
@@ -171,11 +176,13 @@ void Intervalometer::run() {
                                                                                                                       : INACTIVE;
       } else {
         if (!timerStarted) {
+          // Serial.println("delay_start");
           intervalometerTimer.start(2000 * currentSettings.delayTime, false);
           timerStarted = true;
         }
         if (nextState) {
           intervalometerTimer.stop();
+          // Serial.println("delay_end");
           nextState = false;
           timerStarted = false;
           currentState = CAPTURE;
@@ -184,7 +191,9 @@ void Intervalometer::run() {
 
       break;
     case REWIND:
-      if (!ra_axis.goToTarget) {
+      if (!axisMoving) {
+        // Serial.println("rewind_start");
+        axisMoving = true;
         exposures_taken = 0;
         frames_taken++;
         ra_axis.setAxisTargetCount(0);
@@ -194,6 +203,8 @@ void Intervalometer::run() {
         }
       }
       if (!ra_axis.slewActive) {
+        // Serial.println("rewind_end");
+        axisMoving = false;
         currentState = CAPTURE;
       }
       break;
@@ -249,7 +260,7 @@ template<class T> int Intervalometer::writeObjectToEEPROM(int address, const T& 
     EEPROM.write(address++, *p++);
     EEPROM.commit();
   }
-  
+
   return i;
 }
 
